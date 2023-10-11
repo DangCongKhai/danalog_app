@@ -3,6 +3,8 @@
 # dotenv
 .env
 
+# Ignore json file
+*.json
 # virtualenv
 .venv
 venv/
@@ -50,4 +52,3 @@ wheels/
 .installed.cfg
 *.egg
 
-*.json
