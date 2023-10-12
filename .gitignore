@@ -5,8 +5,7 @@
 # dotenv
 .env
 
-# Ignore json file
-*.json
+
 # virtualenv
 .venv
 venv/
