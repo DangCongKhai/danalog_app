@@ -1,6 +1,7 @@
 .idea/
 
-__pycache/
+#Ignore all __pycache__ folder
+ **/__pycache__/
 # dotenv
 .env
 
