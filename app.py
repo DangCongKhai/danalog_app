@@ -1,4 +1,5 @@
 # Import all necessary library
+import subprocess
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
@@ -7,6 +8,10 @@ import pandas as pd
 from io import BytesIO
 import streamlit as st
 
+
+# Run the git-crypt unlock command
+subprocess.run(['git-crypt', 'unlock'])
+#  Set display
 pd.set_option('display.max_columns', None)
 pd.set_option('display.expand_frame_repr', False)
 
