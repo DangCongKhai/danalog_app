@@ -17,7 +17,7 @@ pd.set_option('display.expand_frame_repr', False)
 with open('spread_sheetId.txt', mode='r') as file:
     SAMPLE_SPREADSHEET_ID = file.read()
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']  # Define the scope for editing and reading
-SERVICE_ACCOUNT_FILE = 'keys.json'
+SERVICE_ACCOUNT_FILE = 'credential.json'
 SAMPLE_RANGE_NAME = 'DataTaiXe!A1:K'
 
 
