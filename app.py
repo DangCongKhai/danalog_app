@@ -18,7 +18,7 @@ with open('spread_sheetId.txt', mode='r') as file:
     SAMPLE_SPREADSHEET_ID = file.read()
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']  # Define the scope for editing and reading
 SERVICE_ACCOUNT_FILE = 'credential.json'
-SAMPLE_RANGE_NAME = 'DataTaiXe!A1:K'
+SAMPLE_RANGE_NAME = 'TestData!A1:M'
 
 
 def setup_credentials():
@@ -53,26 +53,18 @@ def create_data_frame(result) -> pd.DataFrame:
         # Create a data frame
         df = pd.DataFrame(data=values[1:], columns=values[0])
         df = df.drop(columns=['Dấu thời gian'], axis=1)
-        # df['Ngày'] = pd.to_datetime(df['Ngày'])
+
         # Convert the 'Ngày' column to datetime format with the correct format
         df['Ngày'] = pd.to_datetime(df['Ngày'], format="%d/%m/%Y",errors='coerce')
-
-        # Format the 'Ngày' column as "%d-%m-%Y" and assign it back to the column
-
-        columns = df.columns.to_list()
-        columns.remove('Ngày')
-        new_columns = ['Ngày']+columns
-        df = df[new_columns]
-        # Set new columns
-        df.columns = ['Ngày', 'Tên Tài Xế', 'Biển số xe', 'Container No.', 'Size ', 'S/C', 'N/X', 'Tuyến đường',
-                      'Lưu đêm', 'Ghi chú']
         column1 = 'Tổng doanh thu (v/c + nâng hạ + đường biển,…)'
         column2 = 'Dthu vận chuyển (chưa VAT)'
         df.insert(0, column='STT', value=None)
         df.insert(8,column=column1, value=None)
         df.insert(9,column=column2, value=None)
-        list_number_type=[column1, column2, 'Size ', 'S/C', 'Lưu đêm']
+        list_number_type=[column1, column2]
+        int_type = ['Size', 'Số chuyến', 'Lưu đêm']
         df[list_number_type]=df[list_number_type].astype(float)
+        df[int_type] = df[int_type].astype(int)
         return df
 
 
@@ -82,9 +74,15 @@ def data_extracting(df, *arg) -> pd.DataFrame:
     start_date = arg[1]
     end_date = arg[2]
     # df['Ngày'] = pd.to_datetime(df['Ngày'], format="%d/%m/%Y",errors='coerce')  # Convert to date format like 10/5/2005
-    new_df = df[(df['Tên Tài Xế'] == name) & (df['Ngày'].dt.date >= start_date) & (df['Ngày'].dt.date <= end_date)]
+    if name:
+        true_df = df['Tên Tài Xế'].isin(name)
+        name_df = df[true_df]
+        new_df = name_df[(name_df['Ngày'].dt.date >= start_date) & (name_df['Ngày'].dt.date <= end_date)]
+        return new_df
     # new_df['Ngày'] = new_df['Ngày'].dt.strftime('%d/%m/%Y')
-    return new_df
+    else:
+        filter_df = df[(df['Ngày'].dt.date >= start_date) & (df['Ngày'].dt.date <= end_date)]
+        return filter_df
 
 
 def to_excel(data):
@@ -107,6 +105,9 @@ def to_excel(data):
     return processed_data
 
 
+def update_data(new_df):
+
+    pass
 
 
 
@@ -119,13 +120,33 @@ creds = setup_credentials()
 result = connectToSheet(creds)
 # Create data frame
 df = create_data_frame(result)
+# Read dien giai sheet
+dien_giai = pd.read_excel('diengiai.xlsx')
+# Create ID column based on Dien Giai 1
+result1 = pd.merge(df, dien_giai, on='Diễn giải 1', how='inner')
+# Read road sheet
+road_table = pd.read_excel('road.xlsx')
+# Final result
+final_result = pd.merge(result1, road_table, on='ID', how='inner').drop('ID',axis=1)
+columns = ['STT', 'Ngày', 'Tên Tài Xế', 'Biển Số Xe', 'Container No.', 'Size', 'Số chuyến', 'Nhập Xuất', 'Tổng doanh thu (v/c + nâng hạ + đường biển,…)', 'Dthu vận chuyển (chưa VAT)', 'Diễn giải 1', 'Diễn giải 2','Tuyến đường', 'Lưu đêm', 'Ghi chú của tài xế ( nếu có)']
+final_result = final_result[columns]
+
+
+
+
+
+
+
+
 
 # Create a Streamlit app
 st.title("DanaLog Webapp")
 
-# with st.form("Data Filter Form"):
+driver_name = df['Tên Tài Xế'].drop_duplicates().tolist()
+
+
 # Create a dropdown to select a name
-selected_name = st.selectbox("Chọn tên tài xế", df['Tên Tài Xế'].drop_duplicates())
+selected_name = st.multiselect("Chọn tên tài xế", driver_name, default=driver_name)
 
 # Create date input widgets for start and end dates
 start_date = st.date_input("Chọn ngày bắt đầu",value=df["Ngày"].median(), min_value=df["Ngày"].min(), max_value=df['Ngày'].max(),format="DD/MM/YYYY")
@@ -141,11 +162,48 @@ else:
     st.error("Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu")
 
 # Filter the DataFrame based on the selected date range
-filtered_df = data_extracting(df, selected_name, start_date, end_date)
-st.write(filtered_df)
+filtered_df = data_extracting(final_result, selected_name, start_date, end_date)
+option = st.selectbox('Chọn vị trí của bạn',('Kế toán','CS'))
+if 'changes' not in st.session_state:
+    st.session_state['changes'] = {}
+if option == 'Kế toán':
+    columns = ['Container No.', 'Tuyến đường']
+    filtered_df = filtered_df.drop(columns=['Diễn giải 1','Diễn giải 2'])
+else:
+    columns = ['Container No.', 'Diễn giải 1', 'Diễn giải 2']
+    filtered_df = filtered_df.drop(columns=['Tuyến đường'])
+st.dataframe(filtered_df)
 
-# Download excel file button
+try:
+    index =st.number_input('Nhap vao hang muon doi:', min_value=df.index.min(), max_value=df.index.max(), step=1)
+    if index in filtered_df.index:
+        with st.form("Edit Data Form"):
+            # Create input fields for each cell in the DataFrame
+            for column in columns:
+                new_value = st.text_input(f"Edit {column} for row {index}", filtered_df.loc[index, column])
+                if new_value != filtered_df.loc[index, column]:
+                    # If the user made changes, store them in a dictionary
+                    st.session_state['changes'][(index, column)] = new_value
+
+            # When the "Save Changes" button is clicked
+            if st.form_submit_button("Save Changes"):
+                # Apply the changes to the DataFrame
+                for (index, column), new_value in st.session_state.changes.items():
+                    if column == 'Container No.':
+                        new_value = str(new_value) if new_value else None  # Convert the data for compatible data type
+                    elif column == 'Tuyến đường':
+                        new_value = str(new_value) if new_value else None
+                    filtered_df.at[index, column] = new_value
+except ValueError:
+    st.error('Nhập dữ liệu sai')
+except KeyError:
+    st.error('Dòng cần sửa không có trong bản')
+st.dataframe(filtered_df)
+
+stringified_changes = {f"Chỉnh sửa dòng:{key[0]}, cột: {key[1]}": value for key, value in st.session_state.changes.items()}
+st.write(stringified_changes)
+
+
 st.download_button(label='📥 Tải file excel tại đây',
-                                data=to_excel(data=filtered_df),
-                                file_name= 'Danalog.xlsx')
-
+               data=to_excel(data=filtered_df),
+               file_name='Danalog.xlsx')
