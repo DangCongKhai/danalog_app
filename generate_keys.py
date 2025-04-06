@@ -8,6 +8,7 @@ passwords = ['12345']
 
 
 hashed_password = stauth.Hasher(passwords).generate()
+# Create new file path
 file_path = Path(__file__).parent/"hashed_wd.pkl"
 
 with file_path.open(mode='wb') as file:

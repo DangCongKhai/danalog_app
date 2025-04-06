@@ -5,6 +5,12 @@
 # dotenv
 .env
 
+# Ignore ds store
+**/.DS_Store
+.DS_Store
+
+# Ignore credentials.json
+credential.json
 
 # virtualenv
 .venv
