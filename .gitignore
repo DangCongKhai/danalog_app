@@ -11,7 +11,7 @@
 
 # Ignore credentials.json
 credential.json
-
+**/credential.json
 # virtualenv
 .venv
 venv/
